@@ -71,7 +71,7 @@ enum State {
     NumberChar,
 }
 
-struct Tokenizer {
+pub struct Tokenizer {
     state: State,
     stream: Vec<Token>,
     identifier: String,
@@ -79,7 +79,7 @@ struct Tokenizer {
 }
 
 #[derive(Debug)]
-enum TokenizerResult {
+pub enum TokenizerResult {
     Continue,
     Again,
     InvalidByte,
@@ -256,7 +256,7 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> TokenizerResult {
 }
 
 impl Tokenizer {
-    fn new() -> Tokenizer {
+    pub fn new() -> Tokenizer {
         Tokenizer {
             state: State::Start,
             stream: Vec::new(),
@@ -265,7 +265,7 @@ impl Tokenizer {
         }
     }
 
-    fn feed(&mut self, byte: isize) -> TokenizerResult {
+    pub fn feed(&mut self, byte: isize) -> TokenizerResult {
         let mut result: TokenizerResult;
 
         result = fsm_proc(self, byte);
@@ -279,7 +279,7 @@ impl Tokenizer {
         result
     }
 
-    fn scan(&mut self, text: &str) {
+    pub fn scan(&mut self, text: &str) {
         let text_buf = text.as_bytes();
         let text_len = text.len();
 
@@ -288,20 +288,20 @@ impl Tokenizer {
 
             self.feed(byte);
         }
-        
-        self.feed(-1);
-    }
 
-    fn finalize(&mut self) {
+        self.feed(-1);
+
         self.stream.push(Token::EndOfProgram);
     }
-}
 
-pub fn tokenize(text: &str) -> Vec<Token> {
-    let mut tokenizer = Tokenizer::new();
+    pub fn extract(mut self) -> Vec<Token> {
+        let stream = self.stream;
 
-    tokenizer.scan(text);
-    tokenizer.finalize();
+        self.state = State::Start;
+        self.stream = Vec::new();
+        self.identifier = String::new();
+        self.number = 0;
 
-    tokenizer.stream
+        stream
+    }
 }

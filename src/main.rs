@@ -1,6 +1,6 @@
 mod lexer;
 
-use lexer::tokenize;
+use lexer::Tokenizer;
 
 const SAMPLE_FANG: &str = "
 var var_1 = 47;
@@ -15,7 +15,11 @@ var var_3 = add_num(var_1, var_2);
 ";
 
 fn main() {
-    let stream = tokenize(SAMPLE_FANG);
+    let mut tokenizer = Tokenizer::new();
+
+    tokenizer.scan(SAMPLE_FANG);
+
+    let stream = tokenizer.extract();
 
     dbg!(stream);
 }
