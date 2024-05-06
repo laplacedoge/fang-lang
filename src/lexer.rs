@@ -1,14 +1,12 @@
 use std::vec::Vec;
 use std::fmt::Debug;
 
-const KEYWORDS: [&str; 3] = [
-    "var", "func", "return",
-];
-
 pub enum Token {
 
-    /* Literals like "var", or "func". */
-    Keyword(String),
+    /* Keywords like "var", or "func". */
+    Variable,
+    Function,
+    Return,
 
     /* Literals like "var_1", or "add_num". */
     Identifier(String),
@@ -44,21 +42,23 @@ pub enum Token {
 impl Debug for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Token::Keyword(text) => write!(f, "KEYWORD \"{}\"", text),
+            Token::Variable => write!(f, "VARIABLE"),
+            Token::Function => write!(f, "FUNCTION"),
+            Token::Return => write!(f, "RETURN"),
             Token::Identifier(text) => write!(f, "IDENTIFIER \"{}\"", text),
-            Token::Assign => write!(f, "="),
-            Token::Number(num) => write!(f, "{}", num),
+            Token::Assign => write!(f, "ASSIGN"),
+            Token::Number(num) => write!(f, "NUMBER {}", num),
             Token::LeftRoundBracket => write!(f, "("),
             Token::RightRoundBracket => write!(f, ")"),
             Token::LeftCurlyBracket => write!(f, "{{"),
             Token::RightCurlyBracket => write!(f, "}}"),
-            Token::VariableTypeIndicator => write!(f, ":"),
-            Token::ReturnTypeIndicator => write!(f, "=>"),
-            Token::Add => write!(f, "+"),
-            Token::Minus => write!(f, "-"),
-            Token::Times => write!(f, "*"),
-            Token::Divide => write!(f, "/"),
-            Token::EndOfStatement => write!(f, ";"),
+            Token::VariableTypeIndicator => write!(f, "VARIABLE TYPE INDICATOR"),
+            Token::ReturnTypeIndicator => write!(f, "RETURN TYPE INDICATOR"),
+            Token::Add => write!(f, "ADD"),
+            Token::Minus => write!(f, "MINUS"),
+            Token::Times => write!(f, "TIMES"),
+            Token::Divide => write!(f, "DIVIDE"),
+            Token::EndOfStatement => write!(f, "END OF STATEMENT"),
             Token::EndOfProgram => write!(f, "END OF PROGRAM"),
         }
     }
@@ -212,10 +212,15 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> TokenizerResult {
                 tokenizer.identifier.push(byte as char);
             } else {
                 let identifier = tokenizer.identifier.to_owned();
+                let text = identifier.as_str();
                 let token: Token;
 
-                if KEYWORDS.contains(&identifier.as_str()) {
-                    token = Token::Keyword(identifier);
+                if text == "var" {
+                    token = Token::Variable;
+                } else if text == "func" {
+                    token = Token::Function;
+                } else if text == "return" {
+                    token = Token::Return;
                 } else {
                     token = Token::Identifier(identifier);
                 }
