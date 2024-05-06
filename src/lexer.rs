@@ -79,7 +79,7 @@ pub struct Tokenizer {
 }
 
 #[derive(Debug)]
-pub enum TokenizerResult {
+enum Result {
     Continue,
     Again,
     InvalidByte,
@@ -131,11 +131,11 @@ fn is_space_byte(byte: u8) -> bool {
     }
 }
 
-fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> TokenizerResult {
+fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
     match tokenizer.state {
         State::Start => {
             if element == -1 {
-                return TokenizerResult::Done;
+                return Result::Done;
             }
 
             let byte = element as u8;
@@ -175,7 +175,7 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> TokenizerResult {
                 tokenizer.stream.push(Token::EndOfStatement);
             } else if is_space_byte(byte) {
             } else {
-                return TokenizerResult::InvalidByte;
+                return Result::InvalidByte;
             }
         },
 
@@ -183,7 +183,7 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> TokenizerResult {
             if element == -1 {
                 tokenizer.stream.push(Token::Minus);
 
-                return TokenizerResult::Done;
+                return Result::Done;
             }
 
             let byte = element as u8;
@@ -197,13 +197,13 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> TokenizerResult {
 
                 tokenizer.state = State::Start;
 
-                return TokenizerResult::Again;
+                return Result::Again;
             }
         },
 
         State::IdentifierChar => {
             if element == -1 {
-                return TokenizerResult::Done;
+                return Result::Done;
             }
 
             let byte = element as u8;
@@ -229,13 +229,13 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> TokenizerResult {
 
                 tokenizer.state = State::Start;
 
-                return TokenizerResult::Again;
+                return Result::Again;
             }
         },
 
         State::NumberChar => {
             if element == -1 {
-                return TokenizerResult::Done;
+                return Result::Done;
             }
 
             let byte = element as u8;
@@ -252,12 +252,12 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> TokenizerResult {
 
                 tokenizer.state = State::Start;
 
-                return TokenizerResult::Again;
+                return Result::Again;
             }
         }
     }
 
-    TokenizerResult::Continue
+    Result::Continue
 }
 
 impl Tokenizer {
@@ -270,12 +270,12 @@ impl Tokenizer {
         }
     }
 
-    pub fn feed(&mut self, byte: isize) -> TokenizerResult {
-        let mut result: TokenizerResult;
+    fn feed(&mut self, byte: isize) -> Result {
+        let mut result: Result;
 
         result = fsm_proc(self, byte);
         match result {
-            TokenizerResult::Again => {
+            Result::Again => {
                 result = fsm_proc(self, byte);
             },
             _ => {},
