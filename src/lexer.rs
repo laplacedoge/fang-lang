@@ -72,14 +72,14 @@ pub struct Stream {
 }
 
 impl Stream {
-    fn new(tokens: Vec<Token>) -> Stream {
+    pub fn new(tokens: Vec<Token>) -> Stream {
         Stream {
             tokens: tokens,
             current: 0,
         }
     }
 
-    fn consume(&mut self) -> Option<Token>{
+    pub fn consume(&mut self) -> Option<Token>{
         if self.current < self.tokens.len() {
             let token = self.tokens[self.current].clone();
 
@@ -91,7 +91,7 @@ impl Stream {
         }
     }
 
-    fn peek(&self) -> Option<&Token> {
+    pub fn peek(&self) -> Option<&Token> {
         if self.current < self.tokens.len() {
             Some(&self.tokens[self.current])
         } else {
@@ -99,7 +99,7 @@ impl Stream {
         }
     }
 
-    fn match_token(&mut self, expected: Token) -> bool {
+    pub fn match_token(&mut self, expected: Token) -> bool {
         if self.peek() == Some(&expected) {
             self.consume();
 
