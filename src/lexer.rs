@@ -1,6 +1,7 @@
 use std::vec::Vec;
 use std::fmt::Debug;
 
+#[derive(Clone, PartialEq)]
 pub enum Token {
 
     /* Keywords like "var", or "func". */
@@ -64,6 +65,51 @@ impl Debug for Token {
     }
 }
 
+#[derive(Debug)]
+pub struct Stream {
+    tokens: Vec<Token>,
+    current: usize,
+}
+
+impl Stream {
+    fn new(tokens: Vec<Token>) -> Stream {
+        Stream {
+            tokens: tokens,
+            current: 0,
+        }
+    }
+
+    fn consume(&mut self) -> Option<Token>{
+        if self.current < self.tokens.len() {
+            let token = self.tokens[self.current].clone();
+
+            self.current += 1;
+
+            Some(token)
+        } else {
+            None
+        }
+    }
+
+    fn peek(&self) -> Option<&Token> {
+        if self.current < self.tokens.len() {
+            Some(&self.tokens[self.current])
+        } else {
+            None
+        }
+    }
+
+    fn match_token(&mut self, expected: Token) -> bool {
+        if self.peek() == Some(&expected) {
+            self.consume();
+
+            true
+        } else {
+            false
+        }
+    }
+}
+
 enum State {
     Start,
     Minus,
@@ -73,7 +119,7 @@ enum State {
 
 pub struct Tokenizer {
     state: State,
-    stream: Vec<Token>,
+    tokens: Vec<Token>,
     identifier: String,
     number: isize,
 }
@@ -152,27 +198,27 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
 
                 tokenizer.state = State::NumberChar;
             } else if byte == b'=' {
-                tokenizer.stream.push(Token::Assign);
+                tokenizer.tokens.push(Token::Assign);
             } else if byte == b':' {
-                tokenizer.stream.push(Token::VariableTypeIndicator);
+                tokenizer.tokens.push(Token::VariableTypeIndicator);
             } else if byte == b'+' {
-                tokenizer.stream.push(Token::Add);
+                tokenizer.tokens.push(Token::Add);
             } else if byte == b'-' {
                 tokenizer.state = State::Minus;
             } else if byte == b'*' {
-                tokenizer.stream.push(Token::Times);
+                tokenizer.tokens.push(Token::Times);
             } else if byte == b'/' {
-                tokenizer.stream.push(Token::Divide);
+                tokenizer.tokens.push(Token::Divide);
             } else if byte == b'(' {
-                tokenizer.stream.push(Token::LeftRoundBracket);
+                tokenizer.tokens.push(Token::LeftRoundBracket);
             } else if byte == b')' {
-                tokenizer.stream.push(Token::RightRoundBracket);
+                tokenizer.tokens.push(Token::RightRoundBracket);
             } else if byte == b'{' {
-                tokenizer.stream.push(Token::LeftCurlyBracket);
+                tokenizer.tokens.push(Token::LeftCurlyBracket);
             } else if byte == b'}' {
-                tokenizer.stream.push(Token::RightCurlyBracket);
+                tokenizer.tokens.push(Token::RightCurlyBracket);
             } else if byte == b';' {
-                tokenizer.stream.push(Token::EndOfStatement);
+                tokenizer.tokens.push(Token::EndOfStatement);
             } else if is_space_byte(byte) {
             } else {
                 return Result::InvalidByte;
@@ -181,7 +227,7 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
 
         State::Minus => {
             if element == -1 {
-                tokenizer.stream.push(Token::Minus);
+                tokenizer.tokens.push(Token::Minus);
 
                 return Result::Done;
             }
@@ -189,11 +235,11 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
             let byte = element as u8;
 
             if byte == b'>' {
-                tokenizer.stream.push(Token::ReturnTypeIndicator);
+                tokenizer.tokens.push(Token::ReturnTypeIndicator);
 
                 tokenizer.state = State::Start;
             } else {
-                tokenizer.stream.push(Token::Minus);
+                tokenizer.tokens.push(Token::Minus);
 
                 tokenizer.state = State::Start;
 
@@ -225,7 +271,7 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
                     token = Token::Identifier(identifier);
                 }
 
-                tokenizer.stream.push(token);
+                tokenizer.tokens.push(token);
 
                 tokenizer.state = State::Start;
 
@@ -248,7 +294,7 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
             } else {
                 let token = Token::Number(tokenizer.number);
 
-                tokenizer.stream.push(token);
+                tokenizer.tokens.push(token);
 
                 tokenizer.state = State::Start;
 
@@ -264,7 +310,7 @@ impl Tokenizer {
     pub fn new() -> Tokenizer {
         Tokenizer {
             state: State::Start,
-            stream: Vec::new(),
+            tokens: Vec::new(),
             identifier: String::new(),
             number: 0,
         }
@@ -296,17 +342,17 @@ impl Tokenizer {
 
         self.feed(-1);
 
-        self.stream.push(Token::EndOfProgram);
+        self.tokens.push(Token::EndOfProgram);
     }
 
-    pub fn extract(mut self) -> Vec<Token> {
-        let stream = self.stream;
+    pub fn extract(mut self) -> Stream {
+        let tokens = self.tokens;
 
         self.state = State::Start;
-        self.stream = Vec::new();
+        self.tokens = Vec::new();
         self.identifier = String::new();
         self.number = 0;
 
-        stream
+        Stream::new(tokens)
     }
 }
