@@ -1,7 +1,7 @@
 use std::vec::Vec;
 use std::fmt::Debug;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone)]
 pub enum Token {
 
     /* Keywords like "var", or "func". */
@@ -65,6 +65,32 @@ impl Debug for Token {
     }
 }
 
+impl PartialEq for Token {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Token::Variable, Token::Variable) |
+            (Token::Function, Token::Function) |
+            (Token::Return, Token::Return) |
+            (Token::Identifier(_), Token::Identifier(_)) |
+            (Token::Assign, Token::Assign) |
+            (Token::Number(_), Token::Number(_)) |
+            (Token::LeftRoundBracket, Token::LeftRoundBracket) |
+            (Token::RightRoundBracket, Token::RightRoundBracket) |
+            (Token::LeftCurlyBracket, Token::LeftCurlyBracket) |
+            (Token::RightCurlyBracket, Token::RightCurlyBracket) |
+            (Token::VariableTypeIndicator, Token::VariableTypeIndicator) |
+            (Token::ReturnTypeIndicator, Token::ReturnTypeIndicator) |
+            (Token::Add, Token::Add) |
+            (Token::Minus, Token::Minus) |
+            (Token::Times, Token::Times) |
+            (Token::Divide, Token::Divide) |
+            (Token::EndOfStatement, Token::EndOfStatement) |
+            (Token::EndOfProgram, Token::EndOfProgram) => true,
+            _ => false,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Stream {
     tokens: Vec<Token>,
@@ -101,8 +127,6 @@ impl Stream {
 
     pub fn match_token(&mut self, expected: Token) -> bool {
         if self.peek() == Some(&expected) {
-            self.consume();
-
             true
         } else {
             false
