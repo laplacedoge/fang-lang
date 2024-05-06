@@ -117,6 +117,8 @@ enum State {
     IdentifierChar,
     NumberChar,
     SingleLineComment,
+    MultiLineCommentHead,
+    MultiLineCommentTailAsterisk,
 }
 
 pub struct Tokenizer {
@@ -315,6 +317,8 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
 
             if byte == b'/' {
                 tokenizer.state = State::SingleLineComment;
+            } else if byte == b'*' {
+                tokenizer.state = State::MultiLineCommentHead;
             } else {
                 tokenizer.tokens.push(Token::Divide);
 
@@ -334,6 +338,32 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
             if byte == b'\r' ||
                byte == b'\n' {
                 tokenizer.state = State::Start;
+            }
+        },
+
+        State::MultiLineCommentHead => {
+            if element == -1 {
+                return Result::Done;
+            }
+
+            let byte = element as u8;
+
+            if byte == b'*' {
+                tokenizer.state = State::MultiLineCommentTailAsterisk;
+            }
+        },
+
+        State::MultiLineCommentTailAsterisk => {
+            if element == -1 {
+                return Result::Done;
+            }
+
+            let byte = element as u8;
+
+            if byte == b'/' {
+                tokenizer.state = State::Start;
+            } else {
+                tokenizer.state = State::MultiLineCommentHead;
             }
         },
     }
