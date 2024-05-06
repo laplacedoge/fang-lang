@@ -113,8 +113,10 @@ impl Stream {
 enum State {
     Start,
     Minus,
+    Slash,
     IdentifierChar,
     NumberChar,
+    SingleLineComment,
 }
 
 pub struct Tokenizer {
@@ -208,7 +210,7 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
             } else if byte == b'*' {
                 tokenizer.tokens.push(Token::Times);
             } else if byte == b'/' {
-                tokenizer.tokens.push(Token::Divide);
+                tokenizer.state = State::Slash;
             } else if byte == b'(' {
                 tokenizer.tokens.push(Token::LeftRoundBracket);
             } else if byte == b')' {
@@ -300,7 +302,40 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
 
                 return Result::Again;
             }
-        }
+        },
+
+        State::Slash => {
+            if element == -1 {
+                tokenizer.tokens.push(Token::Divide);
+
+                return Result::Done;
+            }
+
+            let byte = element as u8;
+
+            if byte == b'/' {
+                tokenizer.state = State::SingleLineComment;
+            } else {
+                tokenizer.tokens.push(Token::Divide);
+
+                tokenizer.state = State::Start;
+
+                return Result::Again;
+            }
+        },
+
+        State::SingleLineComment => {
+            if element == -1 {
+                return Result::Done;
+            }
+
+            let byte = element as u8;
+
+            if byte == b'\r' ||
+               byte == b'\n' {
+                tokenizer.state = State::Start;
+            }
+        },
     }
 
     Result::Continue
