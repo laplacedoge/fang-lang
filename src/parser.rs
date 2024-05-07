@@ -46,6 +46,9 @@ enum Statement {
         value_left: Expression,
         value_right: Expression,
     },
+    Block {
+        statements: Vec<Statement>,
+    }
 }
 
 #[derive(PartialEq, Debug)]
@@ -80,16 +83,32 @@ impl Parser {
     }
 
     fn parse_statement(&mut self) -> Statement {
-        let stream = &mut self.stream;
-        let statement: Statement;
+        match self.stream.peek() {
+            Some(Token::LeftCurlyBracket) => {
+                let mut statements: Vec<Statement> = Vec::new();
 
-        if stream.match_token(Token::Variable) {
-            statement = self.parse_variable_declaration();
-        } else {
-            statement = self.parse_expression_assignment();
+                self.stream.consume();
+
+                loop {
+                    match self.stream.peek() {
+                        None => panic!("Expected statements or \"}}\"!"),
+                        Some(Token::RightCurlyBracket) => break,
+                        _ => statements.push(self.parse_statement()),
+                    }
+                }
+
+                match self.stream.consume() {
+                    Some(Token::RightCurlyBracket) => {},
+                    _ => panic!("Expected \"}}\"!"),
+                }
+
+                return Statement::Block {
+                    statements,
+                };
+            },
+            Some(Token::Variable) => self.parse_variable_declaration(),
+            _ => self.parse_expression_assignment(),
         }
-
-        statement
     }
 
     fn parse_variable_declaration(&mut self) -> Statement {
@@ -402,6 +421,41 @@ mod tests {
                         }),
                         operand_right: Box::new(Expression::Number(17)),
                     },
+                },
+            ],
+        });
+    }
+
+    #[test]
+    fn block() {
+        let program: Program;
+
+        program = scan_and_parse_program!("var value = 17; { value = 45; { value = 33; } {} }");
+        assert_eq!(program, Program {
+            statements: vec![
+                Statement::VariableDeclaration {
+                    identifier: String::from("value"),
+                    r#type: None,
+                    value: Some(Expression::Number(17)),
+                },
+                Statement::Block {
+                    statements: vec![
+                        Statement::ExpressionAssignment {
+                            value_left: Expression::Identifier(String::from("value")),
+                            value_right: Expression::Number(45),
+                        },
+                        Statement::Block {
+                            statements: vec![
+                                Statement::ExpressionAssignment {
+                                    value_left: Expression::Identifier(String::from("value")),
+                                    value_right: Expression::Number(33),
+                                },
+                            ],
+                        },
+                        Statement::Block {
+                            statements: vec![],
+                        },
+                    ],
                 },
             ],
         });
