@@ -84,11 +84,6 @@ impl Parser {
                 _ => panic!("Expected identifier!"),
             };
         } else {
-            match self.stream.consume() {
-                Some(Token::Assign) => {},
-                _ => panic!("Expected \"=\"!"),
-            };
-
             _type = None;
         }
 
@@ -97,6 +92,11 @@ impl Parser {
 
             value = None;
         } else {
+            match self.stream.consume() {
+                Some(Token::Assign) => {},
+                _ => panic!("Expected \"=\"!"),
+            };
+
             value = Some(self.parse_expression());
 
             match self.stream.consume() {

@@ -6,7 +6,7 @@ use parser::Parser;
 
 const SAMPLE_FANG: &str = "
 var var_1 = 47;
-// var var_2: int = 23;
+var var_2: int = 23;
 /*
 func add_num(a: int, b: int) -> int {
     return a + b;
