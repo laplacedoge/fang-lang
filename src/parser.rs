@@ -14,7 +14,7 @@ enum Expression {
 enum Statement {
     VariableDeclaration {
         identifier: String,
-        _type: Option<String>,
+        r#type: Option<String>,
         value: Option<Expression>,
     },
 }
@@ -66,7 +66,7 @@ impl Parser {
     fn parse_variable_declaration(&mut self) -> Statement {
         let statement: Statement;
         let identifier: String;
-        let _type: Option<String>;
+        let r#type: Option<String>;
         let value: Option<Expression>;
 
         self.stream.consume();
@@ -79,12 +79,12 @@ impl Parser {
         if self.stream.match_token(Token::VariableTypeIndicator) {
             self.stream.consume();
 
-            _type = match self.stream.consume() {
+            r#type = match self.stream.consume() {
                 Some(Token::Identifier(id)) => Some(id),
                 _ => panic!("Expected identifier!"),
             };
         } else {
-            _type = None;
+            r#type = None;
         }
 
         if self.stream.match_token(Token::EndOfStatement) {
@@ -107,7 +107,7 @@ impl Parser {
 
         statement = Statement::VariableDeclaration {
             identifier,
-            _type,
+            r#type,
             value,
         };
 
