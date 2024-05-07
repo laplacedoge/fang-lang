@@ -12,11 +12,15 @@ pub enum Token {
     /* Literals like "var_1", or "add_num". */
     Identifier(String),
 
-    /* Symbol "=" */
-    Assign,
-
     /* Literals like "47", or "-23". */
     Number(isize),
+
+    /* Literals enclosed by double quote, for
+       example, `"Hello"` and `"Alex Chen"`. */
+    String(String),
+
+    /* Symbol "=" */
+    Assign,
 
     LeftRoundBracket,
     RightRoundBracket,
@@ -40,6 +44,31 @@ pub enum Token {
     EndOfProgram,
 }
 
+fn escape_string(str: &String) -> String {
+    let str_buf = str.as_bytes();
+    let str_len = str_buf.len();
+    let mut line = String::new();
+
+    for index in 0..str_len {
+        let byte = str_buf[index];
+
+        if byte == b'\r' {
+            line.push_str("\\r");
+        } else if byte == b'\n' {
+            line.push_str("\\n");
+        } else if byte == b'"' {
+            line.push_str("\\\"");
+        } else if byte >= 32 &&
+                  byte <= 126 {
+            line.push(byte as char);
+        } else {
+            line.push_str(&format!("\\x{:02X}", byte))
+        }
+    }
+
+    line
+}
+
 impl Debug for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -47,8 +76,9 @@ impl Debug for Token {
             Token::Function => write!(f, "FUNCTION"),
             Token::Return => write!(f, "RETURN"),
             Token::Identifier(text) => write!(f, "IDENTIFIER \"{}\"", text),
-            Token::Assign => write!(f, "ASSIGN"),
             Token::Number(num) => write!(f, "NUMBER {}", num),
+            Token::String(str) => write!(f, "STRING \"{}\"", escape_string(str)),
+            Token::Assign => write!(f, "ASSIGN"),
             Token::LeftRoundBracket => write!(f, "("),
             Token::RightRoundBracket => write!(f, ")"),
             Token::LeftCurlyBracket => write!(f, "{{"),
@@ -72,8 +102,9 @@ impl PartialEq for Token {
             (Token::Function, Token::Function) |
             (Token::Return, Token::Return) |
             (Token::Identifier(_), Token::Identifier(_)) |
-            (Token::Assign, Token::Assign) |
             (Token::Number(_), Token::Number(_)) |
+            (Token::String(_), Token::String(_)) |
+            (Token::Assign, Token::Assign) |
             (Token::LeftRoundBracket, Token::LeftRoundBracket) |
             (Token::RightRoundBracket, Token::RightRoundBracket) |
             (Token::LeftCurlyBracket, Token::LeftCurlyBracket) |
@@ -140,6 +171,7 @@ enum State {
     Slash,
     IdentifierChar,
     NumberChar,
+    StringStart,
     SingleLineComment,
     MultiLineCommentHead,
     MultiLineCommentTailAsterisk,
@@ -150,6 +182,7 @@ pub struct Tokenizer {
     tokens: Vec<Token>,
     identifier: String,
     number: isize,
+    string: String,
 }
 
 #[derive(Debug)]
@@ -205,6 +238,15 @@ fn is_space_byte(byte: u8) -> bool {
     }
 }
 
+fn is_ascii_printable_byte(byte: u8) -> bool {
+    if byte >= 32 &&
+       byte <= 126 {
+        true
+    } else {
+        false
+    }
+}
+
 fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
     match tokenizer.state {
         State::Start => {
@@ -225,6 +267,10 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
                 tokenizer.number = value as isize;
 
                 tokenizer.state = State::NumberChar;
+            } else if byte == b'"' {
+                tokenizer.string.clear();
+
+                tokenizer.state = State::StringStart;
             } else if byte == b'=' {
                 tokenizer.tokens.push(Token::Assign);
             } else if byte == b':' {
@@ -330,6 +376,29 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
             }
         },
 
+        State::StringStart => {
+            if element == -1 {
+                return Result::Done;
+            }
+
+            let byte = element as u8;
+
+            if byte == b'"' {
+                let string = tokenizer.string.to_owned();
+                let token = Token::String(string);
+
+                tokenizer.tokens.push(token);
+
+                tokenizer.state = State::Start;
+            } else if byte == b'\r' ||
+                      byte == b'\n' ||
+                      is_ascii_printable_byte(byte) {
+                tokenizer.string.push(byte as char);
+            } else {
+                return Result::InvalidByte;
+            }
+        },
+
         State::Slash => {
             if element == -1 {
                 tokenizer.tokens.push(Token::Divide);
@@ -402,6 +471,7 @@ impl Tokenizer {
             tokens: Vec::new(),
             identifier: String::new(),
             number: 0,
+            string: String::new(),
         }
     }
 

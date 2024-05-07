@@ -28,6 +28,7 @@ enum BinaryOperator {
 enum Expression {
     Identifier(String),
     Number(isize),
+    String(String),
     BinaryOperation {
         operator: BinaryOperator,
         operand_left: Box<Expression>,
@@ -250,6 +251,7 @@ impl Parser {
         expression = match self.stream.consume() {
             Some(Token::Identifier(id)) => Expression::Identifier(id),
             Some(Token::Number(num)) => Expression::Number(num),
+            Some(Token::String(str)) => Expression::String(str),
             Some(Token::LeftRoundBracket) => {
                 let expression_inner: Expression;
 
@@ -311,6 +313,18 @@ mod tests {
                     identifier: String::from("var_2"),
                     r#type: None,
                     value: Some(Expression::Number(47)),
+                },
+            ],
+        });
+
+        program = scan_and_parse_program!("var str_1 = \"Hello, world!\\r\\n\";");
+        assert_eq!(program, Program {
+            statements: vec![
+                Statement::VariableDeclaration {
+                    identifier: String::from("str_1"),
+                    r#type: None,
+                    value: Some(Expression::String(
+                        String::from("Hello, world!\\r\\n"))),
                 },
             ],
         });
