@@ -1,13 +1,38 @@
+/*
+
+GRAMMAR:
+
+EXPR ::= TERM ("+" TERM | "-" TERM)*
+
+TERM ::= FACTOR ("*" FACTOR | "/" FACTOR)*
+
+FACTOR ::= "(" EXPR ")"
+         | IDENT
+         | LITERAL
+
+LITERAL ::= NUMBER
+
+*/
+
 use crate::lexer::{Token, Stream};
 
 #[derive(Debug)]
-enum Literal {
-    Number(isize),
+enum BinaryOperator {
+    Addition,
+    Subtraction,
+    Multiplication,
+    Division,
 }
 
 #[derive(Debug)]
 enum Expression {
-    Literal(Literal),
+    Identifier(String),
+    Number(isize),
+    BinaryOperation {
+        operator: BinaryOperator,
+        operand_left: Box<Expression>,
+        operand_right: Box<Expression>,
+    },
 }
 
 #[derive(Debug)]
@@ -115,25 +140,72 @@ impl Parser {
     }
 
     fn parse_expression(&mut self) -> Expression {
-        let expression: Expression;
+        let mut expression_left: Expression;
 
-        if self.stream.match_token(Token::Number(0)) {
-            expression = Expression::Literal(self.parse_literal());
-        } else {
-            panic!("Expected literal!")
+        expression_left = self.parse_term();
+
+        while let Some(token) = self.stream.peek() {
+            match token {
+                Token::Add |
+                Token::Minus => {
+                    let operator = match self.stream.consume() {
+                        Some(Token::Add) => BinaryOperator::Addition,
+                        Some(Token::Minus) => BinaryOperator::Subtraction,
+                        _ => panic!(),
+                    };
+                    let expression_right = self.parse_term();
+    
+                    expression_left = Expression::BinaryOperation {
+                        operator,
+                        operand_left: Box::new(expression_left),
+                        operand_right: Box::new(expression_right),
+                    }
+                },
+                _ => break,
+            }
         }
 
-        expression
+        expression_left
     }
 
-    fn parse_literal(&mut self) -> Literal {
-        let number;
+    fn parse_term(&mut self) -> Expression {
+        let mut expression_left: Expression;
 
-        number = match self.stream.consume() {
-            Some(Token::Number(num)) => num,
-            _ => panic!("Expected number!"),
+        expression_left = self.parse_factor();
+
+        while let Some(token) = self.stream.peek() {
+            match token {
+                Token::Times |
+                Token::Divide => {
+                    let operator = match self.stream.consume() {
+                        Some(Token::Times) => BinaryOperator::Multiplication,
+                        Some(Token::Divide) => BinaryOperator::Division,
+                        _ => panic!(),
+                    };
+                    let expression_right = self.parse_factor();
+
+                    expression_left = Expression::BinaryOperation {
+                        operator,
+                        operand_left: Box::new(expression_left),
+                        operand_right: Box::new(expression_right),
+                    }
+                },
+                _ => break,
+            }
+        }
+
+        expression_left
+    }
+
+    fn parse_factor(&mut self) -> Expression {
+        let expression: Expression;
+
+        expression = match self.stream.consume() {
+            Some(Token::Identifier(id)) => Expression::Identifier(id),
+            Some(Token::Number(num)) => Expression::Number(num),
+            _ => panic!("Expected expression!"),
         };
 
-        Literal::Number(number)
+        expression
     }
 }
