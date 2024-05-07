@@ -203,6 +203,18 @@ impl Parser {
         expression = match self.stream.consume() {
             Some(Token::Identifier(id)) => Expression::Identifier(id),
             Some(Token::Number(num)) => Expression::Number(num),
+            Some(Token::LeftRoundBracket) => {
+                let expression_inner: Expression;
+
+                expression_inner = self.parse_expression();
+
+                match self.stream.consume() {
+                    Some(Token::RightRoundBracket) => {},
+                    _ => panic!("Expected \")\"!"),
+                }
+
+                expression_inner
+            },
             _ => panic!("Expected expression!"),
         };
 

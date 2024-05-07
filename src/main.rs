@@ -15,6 +15,7 @@ var var_7: int = var_4 + var_5 * var_3;
 var var_8: int = var_2 + var_3 - var_4;
 var var_9: int = var_2 * var_3 / var_4;
 var var_10: int = var_2 + var_3 / var_4 * var_5 - var_6 + var_7;
+var var_10: int = (var_2 + var_3) / (var_4 * var_5) - (var_6 + var_7);
 
 /*
 func add_num(a: int, b: int) -> int {
