@@ -16,7 +16,7 @@ LITERAL ::= NUMBER
 
 use crate::lexer::{Token, Stream};
 
-#[derive(Debug)]
+#[derive(PartialEq, Debug)]
 enum BinaryOperator {
     Addition,
     Subtraction,
@@ -24,7 +24,7 @@ enum BinaryOperator {
     Division,
 }
 
-#[derive(Debug)]
+#[derive(PartialEq, Debug)]
 enum Expression {
     Identifier(String),
     Number(isize),
@@ -35,7 +35,7 @@ enum Expression {
     },
 }
 
-#[derive(Debug)]
+#[derive(PartialEq, Debug)]
 enum Statement {
     VariableDeclaration {
         identifier: String,
@@ -44,7 +44,7 @@ enum Statement {
     },
 }
 
-#[derive(Debug)]
+#[derive(PartialEq, Debug)]
 pub struct Program {
     statements: Vec<Statement>,
 }
@@ -219,5 +219,136 @@ impl Parser {
         };
 
         expression
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::lexer::*;
+    use super::*;
+
+    #[macro_export]
+    macro_rules! scan_and_parse_program {
+        ($text:expr) => {{
+            let mut tokenizer = Tokenizer::new();
+            let stream: Stream;
+            let mut parser: Parser;
+
+            tokenizer.scan($text);
+            stream = tokenizer.extract();
+            parser = Parser::new(stream);
+
+            parser.parse_program()
+        }};
+    }
+
+    #[test]
+    fn variable_declaration() {
+        let mut program: Program;
+
+        program = scan_and_parse_program!("var var_1;");
+        assert_eq!(program, Program {
+            statements: vec![
+                Statement::VariableDeclaration {
+                    identifier: String::from("var_1"),
+                    r#type: None,
+                    value: None,
+                },
+            ],
+        });
+
+        program = scan_and_parse_program!("var var_2 = 47;");
+        assert_eq!(program, Program {
+            statements: vec![
+                Statement::VariableDeclaration {
+                    identifier: String::from("var_2"),
+                    r#type: None,
+                    value: Some(Expression::Number(47)),
+                },
+            ],
+        });
+
+        program = scan_and_parse_program!("var var_3: int;");
+        assert_eq!(program, Program {
+            statements: vec![
+                Statement::VariableDeclaration {
+                    identifier: String::from("var_3"),
+                    r#type: Some(String::from("int")),
+                    value: None,
+                },
+            ],
+        });
+
+        program = scan_and_parse_program!("var var_4: int = 23;");
+        assert_eq!(program, Program {
+            statements: vec![
+                Statement::VariableDeclaration {
+                    identifier: String::from("var_4"),
+                    r#type: Some(String::from("int")),
+                    value: Some(Expression::Number(23)),
+                },
+            ],
+        });
+
+        program = scan_and_parse_program!("var var_5: int = var_1 + var_2;");
+        assert_eq!(program, Program {
+            statements: vec![
+                Statement::VariableDeclaration {
+                    identifier: String::from("var_5"),
+                    r#type: Some(String::from("int")),
+                    value: Some(Expression::BinaryOperation {
+                        operator: BinaryOperator::Addition,
+                        operand_left: Box::new(
+                            Expression::Identifier(String::from("var_1"))),
+                        operand_right: Box::new(
+                            Expression::Identifier(String::from("var_2"))),
+                    }),
+                },
+            ],
+        });
+
+        program = scan_and_parse_program!("var var_6: int = var_3 * var_4 - var_5;");
+        assert_eq!(program, Program {
+            statements: vec![
+                Statement::VariableDeclaration {
+                    identifier: String::from("var_6"),
+                    r#type: Some(String::from("int")),
+                    value: Some(Expression::BinaryOperation {
+                        operator: BinaryOperator::Subtraction,
+                        operand_left: Box::new(Expression::BinaryOperation {
+                            operator: BinaryOperator::Multiplication,
+                            operand_left: Box::new(
+                                Expression::Identifier(String::from("var_3"))),
+                            operand_right: Box::new(
+                                Expression::Identifier(String::from("var_4"))),
+                        }),
+                        operand_right: Box::new(
+                            Expression::Identifier(String::from("var_5"))),
+                    }),
+                },
+            ],
+        });
+
+        program = scan_and_parse_program!("var var_7: int = var_3 * (var_4 - var_5);");
+        assert_eq!(program, Program {
+            statements: vec![
+                Statement::VariableDeclaration {
+                    identifier: String::from("var_7"),
+                    r#type: Some(String::from("int")),
+                    value: Some(Expression::BinaryOperation {
+                        operator: BinaryOperator::Multiplication,
+                        operand_left: Box::new(
+                            Expression::Identifier(String::from("var_3"))),
+                        operand_right: Box::new(Expression::BinaryOperation {
+                            operator: BinaryOperator::Subtraction,
+                            operand_left: Box::new(
+                                Expression::Identifier(String::from("var_4"))),
+                            operand_right: Box::new(
+                                Expression::Identifier(String::from("var_5"))),
+                        }),
+                    }),
+                },
+            ],
+        });
     }
 }
