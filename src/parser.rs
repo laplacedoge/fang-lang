@@ -42,6 +42,10 @@ enum Statement {
         r#type: Option<String>,
         value: Option<Expression>,
     },
+    ExpressionAssignment {
+        value_left: Expression,
+        value_right: Expression,
+    },
 }
 
 #[derive(PartialEq, Debug)]
@@ -82,7 +86,7 @@ impl Parser {
         if stream.match_token(Token::Variable) {
             statement = self.parse_variable_declaration();
         } else {
-            panic!("");
+            statement = self.parse_expression_assignment();
         }
 
         statement
@@ -139,6 +143,30 @@ impl Parser {
         statement
     }
 
+    fn parse_expression_assignment(&mut self) -> Statement {
+        let value_left: Expression;
+        let value_right: Expression;
+
+        value_left = self.parse_expression();
+
+        match self.stream.consume() {
+            Some(Token::Assign) => {},
+            _ => panic!("Expected \"=\"!"),
+        }
+
+        value_right = self.parse_expression();
+
+        match self.stream.consume() {
+            Some(Token::EndOfStatement) => {},
+            _ => panic!("Expected \";\"!"),
+        };
+
+        Statement::ExpressionAssignment {
+            value_left,
+            value_right,
+        }
+    }
+
     fn parse_expression(&mut self) -> Expression {
         let mut expression_left: Expression;
 
@@ -154,7 +182,7 @@ impl Parser {
                         _ => panic!(),
                     };
                     let expression_right = self.parse_term();
-    
+
                     expression_left = Expression::BinaryOperation {
                         operator,
                         operand_left: Box::new(expression_left),
@@ -347,6 +375,33 @@ mod tests {
                                 Expression::Identifier(String::from("var_5"))),
                         }),
                     }),
+                },
+            ],
+        });
+    }
+
+    #[test]
+    fn expression_assignment() {
+        let program: Program;
+
+        program = scan_and_parse_program!("value = (factor + 9) / 17;");
+        assert_eq!(program, Program {
+            statements: vec![
+                Statement::ExpressionAssignment {
+                    value_left: Expression::Identifier(
+                        String::from("value")
+                    ),
+                    value_right: Expression::BinaryOperation {
+                        operator: BinaryOperator::Division,
+                        operand_left: Box::new(Expression::BinaryOperation {
+                            operator: BinaryOperator::Addition,
+                            operand_left: Box::new(Expression::Identifier(
+                                String::from("factor")
+                            )),
+                            operand_right: Box::new(Expression::Number(9)),
+                        }),
+                        operand_right: Box::new(Expression::Number(17)),
+                    },
                 },
             ],
         });
