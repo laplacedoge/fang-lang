@@ -434,8 +434,8 @@ impl Tokenizer {
         self.tokens.push(Token::EndOfProgram);
     }
 
-    pub fn extract(mut self) -> Stream {
-        let tokens = self.tokens;
+    pub fn extract(&mut self) -> Stream {
+        let tokens = self.tokens.to_owned();
 
         self.state = State::Start;
         self.tokens = Vec::new();
