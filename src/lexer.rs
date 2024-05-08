@@ -1,65 +1,66 @@
 use std::vec::Vec;
 use std::fmt::Debug;
 
+/// Tokens scanned out by the lexer.
 #[derive(Clone)]
 pub enum Token {
 
-    /* Keyword `var`. */
+    /// Keyword `var`.
     Variable,
 
-    /* Keyword `func`. */
+    /// Keyword `func`.
     Function,
 
-    /* Keyword `return`. */
+    /// Keyword `return`.
     Return,
 
-    /* Identifiers like `var_1`, or `add_num`. */
+    /// Identifiers like `var_1`, or `add_num`.
     Identifier(String),
 
-    /* Numeric literals like `0`, and `47`. */
+    /// Numeric literals like `0`, and `47`.
     Number(isize),
 
-    /* String literals enclosed by double quote, for
-       example, `"Hello"` and `"Alex Chen"`. */
+    /// String literals enclosed by double quote.
+    /// For example, `"Hello"` and `"Alex Chen"`.
     String(String),
 
-    /* Symbol `=`. */
+    /// Symbol `=`.
     Assign,
 
-    /* Symbol `(`. */
+    /// Symbol `(`.
     LeftRoundBracket,
 
-    /* Symbol `)`. */
+    /// Symbol `)`.
     RightRoundBracket,
 
-    /* Symbol `{`. */
+    /// Symbol `{`.
     LeftCurlyBracket,
 
-    /* Symbol `}`. */
+    /// Symbol `}`.
     RightCurlyBracket,
 
-    /* Symbol `:`. */
+    /// Symbol `:`.
     VariableTypeIndicator,
 
-    /* Symbols `->`. */
+    /// Symbol `->`.
     ReturnTypeIndicator,
 
-    /* Symbol `+`. */
+    /// Symbol `+`.
     Add,
 
-    /* Symbol `-`. */
+    /// Symbol `-`.
     Minus,
 
-    /* Symbol `*`. */
+    /// Symbol `*`.
     Times,
 
-    /* Symbol `/`. */
+    /// Symbol `/`.
     Divide,
 
-    /* Symbol `;`. */
+    /// Symbol `;`.
     EndOfStatement,
 
-    /* End of program. */
+    /// End of program.
     EndOfProgram,
 }
 
