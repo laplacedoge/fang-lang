@@ -184,16 +184,34 @@ impl Stream {
     }
 }
 
+/// States used for the lexer's FSM.
 enum State {
     Start,
-    Minus,
-    Slash,
-    IdentifierChar,
-    NumberChar,
-    StringStart,
-    SingleLineComment,
-    MultiLineCommentHead,
-    MultiLineCommentTailAsterisk,
+
+    /// Have character `-`.
+    HaveCharHyphen,
+
+    /// Have character `/`.
+    HaveCharForwardSlash,
+
+    /// Have identifier character.
+    HaveIdentifierChar,
+
+    /// Have numeric character.
+    HaveNumericChar,
+
+    /// Have string start `"`.
+    HaveStringStart,
+
+    /// Have single-line comment start `//`.
+    HaveSingleLineCommentStart,
+
+    /// Have multi-line comment start `/*`.
+    HaveMultiLineCommentStart,
+
+    /// Have the character `*` possibly
+    /// from the multi-line comment end `*/`.
+    HaveMultiLineCommentEndCharAsterisk,
 }
 
 pub struct Tokenizer {
@@ -279,17 +297,17 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
                 tokenizer.identifier.clear();
                 tokenizer.identifier.push(byte as char);
 
-                tokenizer.state = State::IdentifierChar;
+                tokenizer.state = State::HaveIdentifierChar;
             } else if is_number_byte(byte) {
                 let value = byte - b'0';
 
                 tokenizer.number = value as isize;
 
-                tokenizer.state = State::NumberChar;
+                tokenizer.state = State::HaveNumericChar;
             } else if byte == b'"' {
                 tokenizer.string.clear();
 
-                tokenizer.state = State::StringStart;
+                tokenizer.state = State::HaveStringStart;
             } else if byte == b'=' {
                 tokenizer.tokens.push(Token::Assign);
             } else if byte == b':' {
@@ -297,11 +315,11 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
             } else if byte == b'+' {
                 tokenizer.tokens.push(Token::Add);
             } else if byte == b'-' {
-                tokenizer.state = State::Minus;
+                tokenizer.state = State::HaveCharHyphen;
             } else if byte == b'*' {
                 tokenizer.tokens.push(Token::Times);
             } else if byte == b'/' {
-                tokenizer.state = State::Slash;
+                tokenizer.state = State::HaveCharForwardSlash;
             } else if byte == b'(' {
                 tokenizer.tokens.push(Token::LeftRoundBracket);
             } else if byte == b')' {
@@ -318,7 +336,7 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
             }
         },
 
-        State::Minus => {
+        State::HaveCharHyphen => {
             if element == -1 {
                 tokenizer.tokens.push(Token::Minus);
 
@@ -340,7 +358,7 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
             }
         },
 
-        State::IdentifierChar => {
+        State::HaveIdentifierChar => {
             if element == -1 {
                 return Result::Done;
             }
@@ -372,7 +390,7 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
             }
         },
 
-        State::NumberChar => {
+        State::HaveNumericChar => {
             if element == -1 {
                 return Result::Done;
             }
@@ -395,7 +413,7 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
             }
         },
 
-        State::StringStart => {
+        State::HaveStringStart => {
             if element == -1 {
                 return Result::Done;
             }
@@ -418,7 +436,7 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
             }
         },
 
-        State::Slash => {
+        State::HaveCharForwardSlash => {
             if element == -1 {
                 tokenizer.tokens.push(Token::Divide);
 
@@ -428,9 +446,9 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
             let byte = element as u8;
 
             if byte == b'/' {
-                tokenizer.state = State::SingleLineComment;
+                tokenizer.state = State::HaveSingleLineCommentStart;
             } else if byte == b'*' {
-                tokenizer.state = State::MultiLineCommentHead;
+                tokenizer.state = State::HaveMultiLineCommentStart;
             } else {
                 tokenizer.tokens.push(Token::Divide);
 
@@ -440,7 +458,7 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
             }
         },
 
-        State::SingleLineComment => {
+        State::HaveSingleLineCommentStart => {
             if element == -1 {
                 return Result::Done;
             }
@@ -453,7 +471,7 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
             }
         },
 
-        State::MultiLineCommentHead => {
+        State::HaveMultiLineCommentStart => {
             if element == -1 {
                 return Result::Done;
             }
@@ -461,11 +479,11 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
             let byte = element as u8;
 
             if byte == b'*' {
-                tokenizer.state = State::MultiLineCommentTailAsterisk;
+                tokenizer.state = State::HaveMultiLineCommentEndCharAsterisk;
             }
         },
 
-        State::MultiLineCommentTailAsterisk => {
+        State::HaveMultiLineCommentEndCharAsterisk => {
             if element == -1 {
                 return Result::Done;
             }
@@ -475,7 +493,7 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
             if byte == b'/' {
                 tokenizer.state = State::Start;
             } else {
-                tokenizer.state = State::MultiLineCommentHead;
+                tokenizer.state = State::HaveMultiLineCommentStart;
             }
         },
     }
