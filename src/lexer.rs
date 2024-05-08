@@ -4,43 +4,62 @@ use std::fmt::Debug;
 #[derive(Clone)]
 pub enum Token {
 
-    /* Keywords like "var", or "func". */
+    /* Keyword `var`. */
     Variable,
+
+    /* Keyword `func`. */
     Function,
+
+    /* Keyword `return`. */
     Return,
 
-    /* Literals like "var_1", or "add_num". */
+    /* Identifiers like `var_1`, or `add_num`. */
     Identifier(String),
 
-    /* Literals like "47", or "-23". */
+    /* Numeric literals like `0`, and `47`. */
     Number(isize),
 
-    /* Literals enclosed by double quote, for
+    /* String literals enclosed by double quote, for
        example, `"Hello"` and `"Alex Chen"`. */
     String(String),
 
-    /* Symbol "=" */
+    /* Symbol `=`. */
     Assign,
 
+    /* Symbol `(`. */
     LeftRoundBracket,
+
+    /* Symbol `)`. */
     RightRoundBracket,
 
+    /* Symbol `{`. */
     LeftCurlyBracket,
+
+    /* Symbol `}`. */
     RightCurlyBracket,
 
-    /* Symbols ":". */
+    /* Symbol `:`. */
     VariableTypeIndicator,
 
-    /* Symbols "->". */
+    /* Symbols `->`. */
     ReturnTypeIndicator,
- 
+
+    /* Symbol `+`. */
     Add,
+
+    /* Symbol `-`. */
     Minus,
+
+    /* Symbol `*`. */
     Times,
+
+    /* Symbol `/`. */
     Divide,
 
+    /* Symbol `;`. */
     EndOfStatement,
 
+    /* End of program. */
     EndOfProgram,
 }
 
