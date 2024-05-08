@@ -285,14 +285,13 @@ fn is_ascii_printable_byte(byte: u8) -> bool {
     }
 }
 
-fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
+fn fsm_proc(tokenizer: &mut Tokenizer, byte: Option<u8>) -> Result {
     match tokenizer.state {
         State::Start => {
-            if element == -1 {
-                return Result::Done;
-            }
-
-            let byte = element as u8;
+            let byte = match byte {
+                None => return Result::Done,
+                Some(byte) => byte,
+            };
 
             if is_identifier_first_byte(byte) {
                 tokenizer.identifier.clear();
@@ -332,19 +331,21 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
             } else if byte == b';' {
                 tokenizer.tokens.push(Token::EndOfStatement);
             } else if is_space_byte(byte) {
+
             } else {
                 return Result::InvalidByte;
             }
         },
 
         State::HaveCharHyphen => {
-            if element == -1 {
-                tokenizer.tokens.push(Token::Minus);
+            let byte = match byte {
+                None => {
+                    tokenizer.tokens.push(Token::Minus);
 
-                return Result::Done;
-            }
-
-            let byte = element as u8;
+                    return Result::Done;
+                },
+                Some(byte) => byte,
+            };
 
             if byte == b'>' {
                 tokenizer.tokens.push(Token::ReturnTypeIndicator);
@@ -360,11 +361,10 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
         },
 
         State::HaveIdentifierChar => {
-            if element == -1 {
-                return Result::Done;
-            }
-
-            let byte = element as u8;
+            let byte = match byte {
+                None => return Result::Done,
+                Some(byte) => byte,
+            };
 
             if is_identifier_other_byte(byte) {
                 tokenizer.identifier.push(byte as char);
@@ -392,11 +392,10 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
         },
 
         State::HaveNumericChar => {
-            if element == -1 {
-                return Result::Done;
-            }
-
-            let byte = element as u8;
+            let byte = match byte {
+                None => return Result::Done,
+                Some(byte) => byte,
+            };
 
             if is_number_byte(byte) {
                 let value = byte - b'0';
@@ -415,11 +414,10 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
         },
 
         State::HaveStringStart => {
-            if element == -1 {
-                return Result::Done;
-            }
-
-            let byte = element as u8;
+            let byte = match byte {
+                None => return Result::Done,
+                Some(byte) => byte,
+            };
 
             if byte == b'"' {
                 let string = tokenizer.string.to_owned();
@@ -438,13 +436,14 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
         },
 
         State::HaveCharForwardSlash => {
-            if element == -1 {
-                tokenizer.tokens.push(Token::Divide);
+            let byte = match byte {
+                None => {
+                    tokenizer.tokens.push(Token::Divide);
 
-                return Result::Done;
-            }
-
-            let byte = element as u8;
+                    return Result::Done
+                },
+                Some(byte) => byte,
+            };
 
             if byte == b'/' {
                 tokenizer.state = State::HaveSingleLineCommentStart;
@@ -460,11 +459,10 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
         },
 
         State::HaveSingleLineCommentStart => {
-            if element == -1 {
-                return Result::Done;
-            }
-
-            let byte = element as u8;
+            let byte = match byte {
+                None => return Result::Done,
+                Some(byte) => byte,
+            };
 
             if byte == b'\r' ||
                byte == b'\n' {
@@ -473,11 +471,10 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
         },
 
         State::HaveMultiLineCommentStart => {
-            if element == -1 {
-                return Result::Done;
-            }
-
-            let byte = element as u8;
+            let byte = match byte {
+                None => return Result::Done,
+                Some(byte) => byte,
+            };
 
             if byte == b'*' {
                 tokenizer.state = State::HaveMultiLineCommentEndCharAsterisk;
@@ -485,11 +482,10 @@ fn fsm_proc(tokenizer: &mut Tokenizer, element: isize) -> Result {
         },
 
         State::HaveMultiLineCommentEndCharAsterisk => {
-            if element == -1 {
-                return Result::Done;
-            }
-
-            let byte = element as u8;
+            let byte = match byte {
+                None => return Result::Done,
+                Some(byte) => byte,
+            };
 
             if byte == b'/' {
                 tokenizer.state = State::Start;
@@ -513,15 +509,15 @@ impl Tokenizer {
         }
     }
 
-    fn feed(&mut self, byte: isize) -> Result {
+    fn feed(&mut self, byte: Option<u8>) -> Result {
         let mut result: Result;
 
-        result = fsm_proc(self, byte);
-        match result {
-            Result::Again => {
-                result = fsm_proc(self, byte);
-            },
-            _ => {},
+        loop {
+            result = fsm_proc(self, byte);
+            match result {
+                Result::Again => continue,
+                _ => break,
+            }
         }
 
         result
@@ -532,12 +528,10 @@ impl Tokenizer {
         let text_len = text.len();
 
         for index in 0..text_len {
-            let byte = text_buf[index] as isize;
-
-            self.feed(byte);
+            self.feed(Some(text_buf[index]));
         }
 
-        self.feed(-1);
+        self.feed(None);
 
         self.tokens.push(Token::EndOfProgram);
     }
