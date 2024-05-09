@@ -24,6 +24,9 @@ pub enum Token {
     /// For example, `"Hello"` and `"Alex Chen"`.
     String(String),
 
+    /// Symbol `,`.
+    Comma,
+
     /// Symbol `=`.
     Assign,
 
@@ -98,6 +101,7 @@ impl Debug for Token {
             Token::Identifier(text) => write!(f, "IDENTIFIER \"{}\"", text),
             Token::Number(num) => write!(f, "NUMBER {}", num),
             Token::String(str) => write!(f, "STRING \"{}\"", escape_string(str)),
+            Token::Comma => write!(f, "COMMA"),
             Token::Assign => write!(f, "ASSIGN"),
             Token::LeftRoundBracket => write!(f, "("),
             Token::RightRoundBracket => write!(f, ")"),
@@ -124,6 +128,7 @@ impl PartialEq for Token {
             (Token::Identifier(_), Token::Identifier(_)) |
             (Token::Number(_), Token::Number(_)) |
             (Token::String(_), Token::String(_)) |
+            (Token::Comma, Token::Comma) |
             (Token::Assign, Token::Assign) |
             (Token::LeftRoundBracket, Token::LeftRoundBracket) |
             (Token::RightRoundBracket, Token::RightRoundBracket) |
@@ -308,6 +313,8 @@ fn fsm_proc(tokenizer: &mut Tokenizer, byte: Option<u8>) -> Result {
                 tokenizer.string.clear();
 
                 tokenizer.state = State::HaveStringStart;
+            } else if byte == b',' {
+                tokenizer.tokens.push(Token::Comma);
             } else if byte == b'=' {
                 tokenizer.tokens.push(Token::Assign);
             } else if byte == b':' {
