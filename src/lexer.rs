@@ -48,6 +48,12 @@ pub enum Token {
     /// Symbol `->`.
     ReturnTypeIndicator,
 
+    /// Symbol `==`.
+    Equal,
+
+    /// Symbol `!=`.
+    NotEqual,
+
     /// Symbol `+`.
     Add,
 
@@ -109,6 +115,8 @@ impl Debug for Token {
             Token::RightCurlyBracket => write!(f, "}}"),
             Token::VariableTypeIndicator => write!(f, "VARIABLE TYPE INDICATOR"),
             Token::ReturnTypeIndicator => write!(f, "RETURN TYPE INDICATOR"),
+            Token::Equal => write!(f, "EQUAL"),
+            Token::NotEqual => write!(f, "NOT EQUAL"),
             Token::Add => write!(f, "ADD"),
             Token::Minus => write!(f, "MINUS"),
             Token::Times => write!(f, "TIMES"),
@@ -136,6 +144,8 @@ impl PartialEq for Token {
             (Token::RightCurlyBracket, Token::RightCurlyBracket) |
             (Token::VariableTypeIndicator, Token::VariableTypeIndicator) |
             (Token::ReturnTypeIndicator, Token::ReturnTypeIndicator) |
+            (Token::Equal, Token::Equal) |
+            (Token::NotEqual, Token::NotEqual) |
             (Token::Add, Token::Add) |
             (Token::Minus, Token::Minus) |
             (Token::Times, Token::Times) |
@@ -193,6 +203,12 @@ impl Stream {
 /// States used for the lexer's FSM.
 enum State {
     Start,
+
+    /// Have character `=`.
+    HaveCharEqual,
+
+    /// Have character `!`.
+    HaveCharExclamationMark,
 
     /// Have character `-`.
     HaveCharHyphen,
@@ -316,7 +332,9 @@ fn fsm_proc(tokenizer: &mut Tokenizer, byte: Option<u8>) -> Result {
             } else if byte == b',' {
                 tokenizer.tokens.push(Token::Comma);
             } else if byte == b'=' {
-                tokenizer.tokens.push(Token::Assign);
+                tokenizer.state = State::HaveCharEqual;
+            } else if byte == b'!' {
+                tokenizer.state = State::HaveCharExclamationMark;
             } else if byte == b':' {
                 tokenizer.tokens.push(Token::VariableTypeIndicator);
             } else if byte == b'+' {
@@ -340,6 +358,46 @@ fn fsm_proc(tokenizer: &mut Tokenizer, byte: Option<u8>) -> Result {
             } else if is_space_byte(byte) {
 
             } else {
+                return Result::InvalidByte;
+            }
+        },
+
+        State::HaveCharEqual => {
+            let byte = match byte {
+                None => {
+                    tokenizer.tokens.push(Token::Assign);
+
+                    return Result::Done;
+                },
+                Some(byte) => byte,
+            };
+
+            if byte == b'=' {
+                tokenizer.tokens.push(Token::Equal);
+
+                tokenizer.state = State::Start;
+            } else {
+                tokenizer.tokens.push(Token::Assign);
+
+                tokenizer.state = State::Start;
+
+                return Result::Again;
+            }
+        },
+
+        State::HaveCharExclamationMark => {
+            let byte = match byte {
+                None => return Result::InvalidByte,
+                Some(byte) => byte,
+            };
+
+            if byte == b'=' {
+                tokenizer.tokens.push(Token::NotEqual);
+
+                tokenizer.state = State::Start;
+            } else {
+                tokenizer.state = State::Start;
+
                 return Result::InvalidByte;
             }
         },
