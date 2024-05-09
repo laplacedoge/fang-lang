@@ -34,6 +34,10 @@ enum Expression {
         operand_left: Box<Expression>,
         operand_right: Box<Expression>,
     },
+    FunctionCall {
+        callee_name: String,
+        arguments: Vec<Expression>,
+    }
 }
 
 #[derive(PartialEq, Debug)]
@@ -249,7 +253,61 @@ impl Parser {
         let expression: Expression;
 
         expression = match self.stream.consume() {
-            Some(Token::Identifier(id)) => Expression::Identifier(id),
+            Some(Token::Identifier(id)) => {
+                match self.stream.peek() {
+                    Some(Token::LeftRoundBracket) => {
+
+                        /* Consume `(`. */
+                        self.stream.consume();
+
+                        match self.stream.peek() {
+                            Some(Token::RightRoundBracket) => {
+
+                                /* Consume `)`. */
+                                self.stream.consume();
+
+                                Expression::FunctionCall {
+                                    callee_name: id,
+                                    arguments: vec![],
+                                }
+                            },
+                            _ => {
+                                let mut arguments: Vec<Expression> = Vec::new();
+                                let mut expression: Expression;
+
+                                loop {
+                                    expression = self.parse_expression();
+                                    arguments.push(expression);
+    
+                                    match self.stream.peek() {
+                                        Some(Token::Comma) => {
+
+                                            /* Consume `,`. */
+                                            self.stream.consume();
+
+                                            continue;
+                                        },
+                                        Some(Token::RightRoundBracket) => {
+
+                                            /* Consume `)`. */
+                                            self.stream.consume();
+
+                                            break;
+                                        }
+                                        _ => panic!("Expected \",\" or \")\"!"),
+                                    }
+                                }
+
+                                Expression::FunctionCall {
+                                    callee_name: id,
+                                    arguments: arguments,
+                                }
+                            },
+                        }
+                    },
+                    _ => Expression::Identifier(id),
+                }
+            },
             Some(Token::Number(num)) => Expression::Number(num),
             Some(Token::String(str)) => Expression::String(str),
             Some(Token::LeftRoundBracket) => {
