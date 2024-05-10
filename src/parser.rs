@@ -24,8 +24,11 @@ enum BinaryOperator {
     Subtraction,
     Multiplication,
     Division,
+
     Equal,
     NotEqual,
+
+    Assign,
 }
 
 #[derive(PartialEq, Debug)]
@@ -51,9 +54,8 @@ enum Statement {
         r#type: Option<String>,
         value: Option<Expression>,
     },
-    ExpressionAssignment {
-        value_left: Expression,
-        value_right: Expression,
+    Expression {
+        expression: Expression,
     },
     Block {
         statements: Vec<Statement>,
@@ -116,7 +118,7 @@ impl Parser {
                 };
             },
             Some(Token::Variable) => self.parse_variable_declaration(),
-            _ => self.parse_expression_assignment(),
+            _ => self.parse_expression_statement(),
         }
     }
 
@@ -171,31 +173,50 @@ impl Parser {
         statement
     }
 
-    fn parse_expression_assignment(&mut self) -> Statement {
-        let value_left: Expression;
-        let value_right: Expression;
+    fn parse_expression_statement(&mut self) -> Statement {
+        let expression: Expression;
 
-        value_left = self.parse_expression();
-
-        match self.stream.consume() {
-            Some(Token::Assign) => {},
-            _ => panic!("Expected \"=\"!"),
-        }
-
-        value_right = self.parse_expression();
+        expression = self.parse_expression();
 
         match self.stream.consume() {
             Some(Token::EndOfStatement) => {},
             _ => panic!("Expected \";\"!"),
         };
 
-        Statement::ExpressionAssignment {
-            value_left,
-            value_right,
+        Statement::Expression {
+            expression: expression,
         }
     }
 
     fn parse_expression(&mut self) -> Expression {
+        let mut expression_left: Expression;
+
+        expression_left = self.parse_assignment_operand();
+
+        while let Some(token) = self.stream.peek() {
+            match token {
+                Token::Assign => {
+                    let expression_right: Expression;
+
+                    self.stream.consume();
+
+                    expression_right = self.parse_assignment_operand();
+
+                    expression_left = Expression::BinaryOperation {
+                        operator: BinaryOperator::Assign,
+                        operand_left: Box::new(expression_left),
+                        operand_right: Box::new(expression_right),
+                    }
+                },
+                _ => break,
+            }
+        }
+
+        expression_left
+    }
+
+    /// Parse assignment operand in assignment like `expr_1 = expr_2`.
+    fn parse_assignment_operand(&mut self) -> Expression {
         let mut expression_left: Expression;
 
         expression_left = self.parse_comparison_operand();
@@ -513,20 +534,23 @@ mod tests {
         program = scan_and_parse_program!("value = (factor + 9) / 17;");
         assert_eq!(program, Program {
             statements: vec![
-                Statement::ExpressionAssignment {
-                    value_left: Expression::Identifier(
-                        String::from("value")
-                    ),
-                    value_right: Expression::BinaryOperation {
-                        operator: BinaryOperator::Division,
-                        operand_left: Box::new(Expression::BinaryOperation {
-                            operator: BinaryOperator::Addition,
-                            operand_left: Box::new(Expression::Identifier(
-                                String::from("factor")
-                            )),
-                            operand_right: Box::new(Expression::Number(9)),
+                Statement::Expression {
+                    expression: Expression::BinaryOperation {
+                        operator: BinaryOperator::Assign,
+                        operand_left: Box::new(Expression::Identifier(
+                            String::from("value")
+                        )),
+                        operand_right: Box::new(Expression::BinaryOperation {
+                            operator: BinaryOperator::Division,
+                            operand_left: Box::new(Expression::BinaryOperation {
+                                operator: BinaryOperator::Addition,
+                                operand_left: Box::new(Expression::Identifier(
+                                    String::from("factor")
+                                )),
+                                operand_right: Box::new(Expression::Number(9)),
+                            }),
+                            operand_right: Box::new(Expression::Number(17)),
                         }),
-                        operand_right: Box::new(Expression::Number(17)),
                     },
                 },
             ],
@@ -547,15 +571,21 @@ mod tests {
                 },
                 Statement::Block {
                     statements: vec![
-                        Statement::ExpressionAssignment {
-                            value_left: Expression::Identifier(String::from("value")),
-                            value_right: Expression::Number(45),
+                        Statement::Expression {
+                            expression: Expression::BinaryOperation {
+                                operator: BinaryOperator::Assign,
+                                operand_left: Box::new(Expression::Identifier(String::from("value"))),
+                                operand_right: Box::new(Expression::Number(45)),
+                            },
                         },
                         Statement::Block {
                             statements: vec![
-                                Statement::ExpressionAssignment {
-                                    value_left: Expression::Identifier(String::from("value")),
-                                    value_right: Expression::Number(33),
+                                Statement::Expression {
+                                    expression: Expression::BinaryOperation {
+                                        operator: BinaryOperator::Assign,
+                                        operand_left: Box::new(Expression::Identifier(String::from("value"))),
+                                        operand_right: Box::new(Expression::Number(33)),
+                                    },
                                 },
                             ],
                         },
