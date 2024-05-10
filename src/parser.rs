@@ -47,19 +47,58 @@ enum Expression {
     }
 }
 
+/// Statement, the basic element to form a program.
 #[derive(PartialEq, Debug)]
 enum Statement {
+
+    /// Variable declaration statement.
+    /// 
+    /// # Examples
+    /// ```fang
+    /// var value;
+    /// var text = "Hello, world!";
+    /// var text: String;
+    /// var num: usize = 47;
+    /// ```
+    /// 
+    /// # Fields
+    /// - `identifier` Identifier of the declared variable.
+    /// - `type` Type of the declared variable.
+    /// - `value` Initial value of the declared variable.
     VariableDeclaration {
         identifier: String,
         r#type: Option<String>,
         value: Option<Expression>,
     },
+
+    /// Expression statement.
+    /// 
+    /// # Examples
+    /// ```fang
+    /// name = "Alex Chen";
+    /// value = (init + 3) * 4;
+    /// ```
+    /// 
+    /// # Fields
+    /// - `expression` Expression.
     Expression {
         expression: Expression,
     },
+
+    /// Block statement.
+    /// 
+    /// # Examples
+    /// ```fang
+    /// {
+    ///     var value = 33;
+    /// }
+    /// ```
+    /// 
+    /// # Fields
+    /// - `statements` All statements in this block.
     Block {
         statements: Vec<Statement>,
-    }
+    },
 }
 
 #[derive(PartialEq, Debug)]
