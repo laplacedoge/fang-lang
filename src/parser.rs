@@ -2,7 +2,9 @@
 
 GRAMMAR:
 
-EXPR ::= TERM ("+" TERM | "-" TERM)*
+EXPR ::= COMP_OPERAND ("==" COMP_OPERAND | "!=" COMP_OPERAND)*
+
+COMP_OPERAND ::= TERM ("+" TERM | "-" TERM)*
 
 TERM ::= FACTOR ("*" FACTOR | "/" FACTOR)*
 
@@ -22,6 +24,8 @@ enum BinaryOperator {
     Subtraction,
     Multiplication,
     Division,
+    Equal,
+    NotEqual,
 }
 
 #[derive(PartialEq, Debug)]
@@ -192,6 +196,37 @@ impl Parser {
     }
 
     fn parse_expression(&mut self) -> Expression {
+        let mut expression_left: Expression;
+
+        expression_left = self.parse_comparison_operand();
+
+        while let Some(token) = self.stream.peek() {
+            match token {
+                Token::Equal |
+                Token::NotEqual => {
+                    let operator = match self.stream.consume() {
+                        Some(Token::Equal) => BinaryOperator::Equal,
+                        Some(Token::NotEqual) => BinaryOperator::NotEqual,
+                        _ => panic!(),
+                    };
+                    let expression_right = self.parse_comparison_operand();
+
+                    expression_left = Expression::BinaryOperation {
+                        operator,
+                        operand_left: Box::new(expression_left),
+                        operand_right: Box::new(expression_right),
+                    }
+                },
+                _ => break,
+            }
+        }
+
+        expression_left
+    }
+
+    /// Parse comparison operand in comparisons like
+    /// `expr_1 == expr_2` or `expr_1 != expr_2`.
+    fn parse_comparison_operand(&mut self) -> Expression {
         let mut expression_left: Expression;
 
         expression_left = self.parse_term();
