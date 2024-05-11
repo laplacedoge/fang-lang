@@ -365,64 +365,70 @@ impl Parser {
     fn parse_identifier_or_function_call(
         &mut self
     ) -> Expression {
+        let expression: Expression;
         let identifier = match self.stream.consume() {
             Some(Token::Identifier(id)) => id,
             _ => panic!("Expected identifier!"),
         };
 
-        match self.stream.peek() {
+        expression = match self.stream.peek() {
             Some(Token::LeftRoundBracket) => {
+                let arguments = self.parse_function_call_arguments();
 
-                /* Consume `(`. */
-                self.stream.consume();
-
-                match self.stream.peek() {
-                    Some(Token::RightRoundBracket) => {
-
-                        /* Consume `)`. */
-                        self.stream.consume();
-
-                        Expression::FunctionCall {
-                            callee_name: identifier,
-                            arguments: vec![],
-                        }
-                    },
-                    _ => {
-                        let mut arguments: Vec<Expression> = Vec::new();
-                        let mut expression: Expression;
-
-                        loop {
-                            expression = self.parse_expression();
-                            arguments.push(expression);
-
-                            match self.stream.peek() {
-                                Some(Token::Comma) => {
-
-                                    /* Consume `,`. */
-                                    self.stream.consume();
-
-                                    continue;
-                                },
-                                Some(Token::RightRoundBracket) => {
-
-                                    /* Consume `)`. */
-                                    self.stream.consume();
-
-                                    break;
-                                }
-                                _ => panic!("Expected \",\" or \")\"!"),
-                            }
-                        }
-
-                        Expression::FunctionCall {
-                            callee_name: identifier,
-                            arguments: arguments,
-                        }
-                    },
+                Expression::FunctionCall {
+                    callee_name: identifier,
+                    arguments: arguments,
                 }
             },
             _ => Expression::Identifier(identifier),
+        };
+
+        expression
+    }
+
+    fn parse_function_call_arguments(
+        &mut self
+    ) -> Vec<Expression> {
+        let mut arguments: Vec<Expression> = Vec::new();
+
+        /* Consume `(`. */
+        self.stream.consume();
+
+        match self.stream.peek() {
+            Some(Token::RightRoundBracket) => {
+
+                /* Consume `)`. */
+                self.stream.consume();
+            },
+            _ => {
+                let mut expression: Expression;
+
+                loop {
+                    expression = self.parse_expression();
+                    arguments.push(expression);
+
+                    match self.stream.peek() {
+                        Some(Token::Comma) => {
+
+                            /* Consume `,`. */
+                            self.stream.consume();
+
+                            continue;
+                        },
+                        Some(Token::RightRoundBracket) => {
+
+                            /* Consume `)`. */
+                            self.stream.consume();
+
+                            break;
+                        }
+                        _ => panic!("Expected \",\" or \")\"!"),
+                    }
+                }
+            },
         }
+
+        arguments
     }
 
     fn parse_number(
