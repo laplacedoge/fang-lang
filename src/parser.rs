@@ -347,78 +347,119 @@ impl Parser {
     fn parse_factor(&mut self) -> Expression {
         let expression: Expression;
 
-        expression = match self.stream.consume() {
-            Some(Token::Identifier(id)) => {
-                match self.stream.peek() {
-                    Some(Token::LeftRoundBracket) => {
-
-                        /* Consume `(`. */
-                        self.stream.consume();
-
-                        match self.stream.peek() {
-                            Some(Token::RightRoundBracket) => {
-
-                                /* Consume `)`. */
-                                self.stream.consume();
-
-                                Expression::FunctionCall {
-                                    callee_name: id,
-                                    arguments: vec![],
-                                }
-                            },
-                            _ => {
-                                let mut arguments: Vec<Expression> = Vec::new();
-                                let mut expression: Expression;
-
-                                loop {
-                                    expression = self.parse_expression();
-                                    arguments.push(expression);
-    
-                                    match self.stream.peek() {
-                                        Some(Token::Comma) => {
-
-                                            /* Consume `,`. */
-                                            self.stream.consume();
-
-                                            continue;
-                                        },
-                                        Some(Token::RightRoundBracket) => {
-
-                                            /* Consume `)`. */
-                                            self.stream.consume();
-
-                                            break;
-                                        }
-                                        _ => panic!("Expected \",\" or \")\"!"),
-                                    }
-                                }
-
-                                Expression::FunctionCall {
-                                    callee_name: id,
-                                    arguments: arguments,
-                                }
-                            },
-                        }
-                    },
-                    _ => Expression::Identifier(id),
-                }
-            },
-            Some(Token::Number(num)) => Expression::Number(num),
-            Some(Token::String(str)) => Expression::String(str),
-            Some(Token::LeftRoundBracket) => {
-                let expression_inner: Expression;
-
-                expression_inner = self.parse_expression();
-
-                match self.stream.consume() {
-                    Some(Token::RightRoundBracket) => {},
-                    _ => panic!("Expected \")\"!"),
-                }
-
-                expression_inner
-            },
+        expression = match self.stream.peek() {
+            Some(Token::Identifier(_)) =>
+                self.parse_identifier_or_function_call(),
+            Some(Token::Number(_)) =>
+                self.parse_number(),
+            Some(Token::String(_)) =>
+                self.parse_string(),
+            Some(Token::LeftRoundBracket) =>
+                self.parse_grouped_expression(),
             _ => panic!("Expected expression!"),
         };
+
+        expression
+    }
+
+    fn parse_identifier_or_function_call(
+        &mut self
+    ) -> Expression {
+        let identifier = match self.stream.consume() {
+            Some(Token::Identifier(id)) => id,
+            _ => panic!("Expected identifier!"),
+        };
+
+        match self.stream.peek() {
+            Some(Token::LeftRoundBracket) => {
+
+                /* Consume `(`. */
+                self.stream.consume();
+
+                match self.stream.peek() {
+                    Some(Token::RightRoundBracket) => {
+
+                        /* Consume `)`. */
+                        self.stream.consume();
+
+                        Expression::FunctionCall {
+                            callee_name: identifier,
+                            arguments: vec![],
+                        }
+                    },
+                    _ => {
+                        let mut arguments: Vec<Expression> = Vec::new();
+                        let mut expression: Expression;
+
+                        loop {
+                            expression = self.parse_expression();
+                            arguments.push(expression);
+
+                            match self.stream.peek() {
+                                Some(Token::Comma) => {
+
+                                    /* Consume `,`. */
+                                    self.stream.consume();
+
+                                    continue;
+                                },
+                                Some(Token::RightRoundBracket) => {
+
+                                    /* Consume `)`. */
+                                    self.stream.consume();
+
+                                    break;
+                                }
+                                _ => panic!("Expected \",\" or \")\"!"),
+                            }
+                        }
+
+                        Expression::FunctionCall {
+                            callee_name: identifier,
+                            arguments: arguments,
+                        }
+                    },
+                }
+            },
+            _ => Expression::Identifier(identifier),
+        }
+    }
+
+    fn parse_number(
+        &mut self
+    ) -> Expression {
+        let number = match self.stream.consume() {
+            Some(Token::Number(num)) => num,
+            _ => panic!("Expected number!"),
+        };
+
+        Expression::Number(number)
+    }
+
+    fn parse_string(
+        &mut self
+    ) -> Expression {
+        let string = match self.stream.consume() {
+            Some(Token::String(str)) => str,
+            _ => panic!("Expected string!"),
+        };
+
+        Expression::String(string)
+    }
+
+    fn parse_grouped_expression(
+        &mut self
+    ) -> Expression {
+        let expression: Expression;
+
+        self.stream.consume();
+
+        expression = self.parse_expression();
+
+        match self.stream.consume() {
+            Some(Token::RightRoundBracket) => {},
+            _ => panic!("Expected \")\"!"),
+        }
 
         expression
     }
