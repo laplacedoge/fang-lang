@@ -51,7 +51,7 @@ enum Expression {
 #[derive(PartialEq, Debug)]
 enum Statement {
 
-    /// Variable declaration statement.
+    /// Variable definition statement.
     /// 
     /// # Examples
     /// ```fang
@@ -62,10 +62,10 @@ enum Statement {
     /// ```
     /// 
     /// # Fields
-    /// - `identifier` Identifier of the declared variable.
-    /// - `type` Type of the declared variable.
-    /// - `value` Initial value of the declared variable.
-    VariableDeclaration {
+    /// - `identifier` Identifier of the defined variable.
+    /// - `type` Type of the defined variable.
+    /// - `value` Initial value of the defined variable.
+    VariableDefinition {
         identifier: String,
         r#type: Option<String>,
         value: Option<Expression>,
@@ -156,12 +156,15 @@ impl Parser {
                     statements,
                 };
             },
-            Some(Token::Variable) => self.parse_variable_declaration(),
+            Some(Token::Variable) =>
+                self.parse_variable_definition_statement(),
             _ => self.parse_expression_statement(),
         }
     }
 
-    fn parse_variable_declaration(&mut self) -> Statement {
+    fn parse_variable_definition_statement(
+        &mut self
+    ) -> Statement {
         let statement: Statement;
         let identifier: String;
         let r#type: Option<String>;
@@ -203,7 +206,7 @@ impl Parser {
             };
         }
 
-        statement = Statement::VariableDeclaration {
+        statement = Statement::VariableDefinition {
             identifier,
             r#type,
             value,
@@ -492,13 +495,13 @@ mod tests {
     }
 
     #[test]
-    fn variable_declaration() {
+    fn variable_definition() {
         let mut program: Program;
 
         program = scan_and_parse_program!("var var_1;");
         assert_eq!(program, Program {
             statements: vec![
-                Statement::VariableDeclaration {
+                Statement::VariableDefinition {
                     identifier: String::from("var_1"),
                     r#type: None,
                     value: None,
@@ -509,7 +512,7 @@ mod tests {
         program = scan_and_parse_program!("var var_2 = 47;");
         assert_eq!(program, Program {
             statements: vec![
-                Statement::VariableDeclaration {
+                Statement::VariableDefinition {
                     identifier: String::from("var_2"),
                     r#type: None,
                     value: Some(Expression::Number(47)),
@@ -520,7 +523,7 @@ mod tests {
         program = scan_and_parse_program!("var str_1 = \"Hello, world!\\r\\n\";");
         assert_eq!(program, Program {
             statements: vec![
-                Statement::VariableDeclaration {
+                Statement::VariableDefinition {
                     identifier: String::from("str_1"),
                     r#type: None,
                     value: Some(Expression::String(
@@ -532,7 +535,7 @@ mod tests {
         program = scan_and_parse_program!("var var_3: int;");
         assert_eq!(program, Program {
             statements: vec![
-                Statement::VariableDeclaration {
+                Statement::VariableDefinition {
                     identifier: String::from("var_3"),
                     r#type: Some(String::from("int")),
                     value: None,
@@ -543,7 +546,7 @@ mod tests {
         program = scan_and_parse_program!("var var_4: int = 23;");
         assert_eq!(program, Program {
             statements: vec![
-                Statement::VariableDeclaration {
+                Statement::VariableDefinition {
                     identifier: String::from("var_4"),
                     r#type: Some(String::from("int")),
                     value: Some(Expression::Number(23)),
@@ -554,7 +557,7 @@ mod tests {
         program = scan_and_parse_program!("var var_5: int = var_1 + var_2;");
         assert_eq!(program, Program {
             statements: vec![
-                Statement::VariableDeclaration {
+                Statement::VariableDefinition {
                     identifier: String::from("var_5"),
                     r#type: Some(String::from("int")),
                     value: Some(Expression::BinaryOperation {
@@ -571,7 +574,7 @@ mod tests {
         program = scan_and_parse_program!("var var_6: int = var_3 * var_4 - var_5;");
         assert_eq!(program, Program {
             statements: vec![
-                Statement::VariableDeclaration {
+                Statement::VariableDefinition {
                     identifier: String::from("var_6"),
                     r#type: Some(String::from("int")),
                     value: Some(Expression::BinaryOperation {
@@ -593,7 +596,7 @@ mod tests {
         program = scan_and_parse_program!("var var_7: int = var_3 * (var_4 - var_5);");
         assert_eq!(program, Program {
             statements: vec![
-                Statement::VariableDeclaration {
+                Statement::VariableDefinition {
                     identifier: String::from("var_7"),
                     r#type: Some(String::from("int")),
                     value: Some(Expression::BinaryOperation {
@@ -650,7 +653,7 @@ mod tests {
         program = scan_and_parse_program!("var value = 17; { value = 45; { value = 33; } {} }");
         assert_eq!(program, Program {
             statements: vec![
-                Statement::VariableDeclaration {
+                Statement::VariableDefinition {
                     identifier: String::from("value"),
                     r#type: None,
                     value: Some(Expression::Number(17)),
