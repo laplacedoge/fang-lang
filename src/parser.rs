@@ -47,6 +47,13 @@ enum Expression {
     }
 }
 
+/// Function parameter.
+#[derive(PartialEq, Debug)]
+struct Parameter {
+    name: String,
+    r#type: Option<String>,
+}
+
 /// Statement, the basic element to form a program.
 #[derive(PartialEq, Debug)]
 enum Statement {
@@ -69,6 +76,40 @@ enum Statement {
         identifier: String,
         r#type: Option<String>,
         value: Option<Expression>,
+    },
+
+    /// Function definition statement.
+    /// 
+    /// # Examples
+    /// ```fang
+    /// func add_num(a: int, b: int) -> int {
+    ///     return a + b;
+    /// }
+    /// ```
+    /// 
+    /// # Fields
+    /// - `callee_name` Function name.
+    /// - `parameters` All parameters.
+    /// - `return_type` Type of the return value.
+    /// - `statements` All statements inside the function body.
+    FunctionDefinition {
+        callee_name: String,
+        parameters: Vec<Parameter>,
+        return_type: Option<String>,
+        statements: Vec<Statement>,
+    },
+
+    /// Return statement.
+    /// 
+    /// # Examples
+    /// ```fang
+    /// return num_1 == num_2;
+    /// ```
+    /// 
+    /// # Fields
+    /// - `expression` Returned expression.
+    Return {
+        expression: Expression,
     },
 
     /// Expression statement.
@@ -140,6 +181,10 @@ impl Parser {
                 self.parse_block_statement(),
             Some(Token::Variable) =>
                 self.parse_variable_definition_statement(),
+            Some(Token::Function) =>
+                self.parse_function_definition_statement(),
+            Some(Token::Return) =>
+                self.parse_return_statement(),
             _ => self.parse_expression_statement(),
         };
 
@@ -222,6 +267,173 @@ impl Parser {
             identifier,
             r#type,
             value,
+        };
+
+        statement
+    }
+
+    fn parse_function_definition_statement(
+        &mut self
+    ) -> Statement {
+        let statement: Statement;
+        let callee_name: String;
+        let parameters: Vec<Parameter>;
+        let return_type: Option<String>;
+        let statements: Vec<Statement>;
+
+        self.stream.consume();
+
+        callee_name = match self.stream.consume() {
+            Some(Token::Identifier(id)) => id,
+            _ => panic!("Expected identifier!"),
+        };
+
+        parameters = self.parse_function_parameters();
+
+        match self.stream.peek() {
+            Some(Token::ReturnTypeIndicator) => {
+                self.stream.consume();
+
+                return_type = match self.stream.consume() {
+                    Some(Token::Identifier(id)) => Some(id),
+                    _ => panic!("Expected identifier!"),
+                }
+            },
+            _ => return_type = None,
+        }
+
+        statements = self.parse_function_body();
+
+        statement = Statement::FunctionDefinition {
+            callee_name,
+            parameters,
+            return_type,
+            statements,
+        };
+
+        statement
+    }
+
+    fn parse_function_parameters(
+        &mut self
+    ) -> Vec<Parameter> {
+        let mut parameters: Vec<Parameter> = Vec::new();
+
+        /* Consume `(`. */
+        match self.stream.consume() {
+            Some(Token::LeftRoundBracket) => {},
+            _ => panic!("Expected \"(\"!"),
+        };
+
+        loop {
+            match self.stream.peek() {
+                Some(Token::RightRoundBracket) => break,
+                Some(Token::Identifier(_)) =>
+                    parameters.push(self.parse_function_parameter()),
+                _ => panic!("Expected parameters or \")\"!"),
+            }
+
+            match self.stream.peek() {
+                Some(Token::Comma) => {
+                    self.stream.consume();
+                },
+                Some(Token::RightRoundBracket) => break,
+                _ => panic!("Expected \",\" or \")\"!"),
+            }
+        }
+
+        /* Consume `)`. */
+        match self.stream.consume() {
+            Some(Token::RightRoundBracket) => {},
+            _ => panic!("Expected \")\"!"),
+        };
+
+        parameters
+    }
+
+    fn parse_function_parameter(
+        &mut self
+    ) -> Parameter {
+        let parameter: Parameter;
+        let name: String;
+        let r#type: Option<String>;
+
+        /* Consume parameter name. */
+        name = match self.stream.consume() {
+            Some(Token::Identifier(id)) => id,
+            _ => panic!("Expected identifier!"),
+        };
+
+        /* Try to parse parameter type. */
+        match self.stream.peek() {
+            Some(Token::VariableTypeIndicator) => {
+                self.stream.consume();
+
+                r#type = match self.stream.consume() {
+                    Some(Token::Identifier(id)) => Some(id),
+                    _ => panic!("Expected identifier!"),
+                }
+            },
+            _ => r#type = None,
+        }
+
+        parameter = Parameter {
+            name,
+            r#type,
+        };
+
+        parameter
+    }
+
+    fn parse_function_body(
+        &mut self
+    ) -> Vec<Statement> {
+        let mut statements: Vec<Statement> = Vec::new();
+
+        /* Consume `{`. */
+        match self.stream.consume() {
+            Some(Token::LeftCurlyBracket) => {},
+            _ => panic!("Expected \"{{\"!"),
+        }
+
+        /* Parse all statements. */
+        loop {
+            match self.stream.peek() {
+                None => panic!("Expected statements or \"}}\"!"),
+                Some(Token::RightCurlyBracket) => break,
+                _ => statements.push(self.parse_statement()),
+            }
+        }
+
+        /* Consume `}`. */
+        match self.stream.consume() {
+            Some(Token::RightCurlyBracket) => {},
+            _ => panic!("Expected \"}}\"!"),
+        }
+
+        statements
+    }
+
+    fn parse_return_statement(
+        &mut self
+    ) -> Statement {
+        let statement: Statement;
+        let expression: Expression;
+
+        /* Consume `return`. */
+        self.stream.consume();
+
+        /* Parse expression. */
+        expression = self.parse_expression();
+
+        /* Consume `;`. */
+        match self.stream.consume() {
+            Some(Token::EndOfStatement) => {},
+            _ => panic!("Expected \";\"!"),
+        };
+
+        statement = Statement::Return {
+            expression,
         };
 
         statement
