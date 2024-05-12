@@ -133,33 +133,45 @@ impl Parser {
     }
 
     fn parse_statement(&mut self) -> Statement {
-        match self.stream.peek() {
-            Some(Token::LeftCurlyBracket) => {
-                let mut statements: Vec<Statement> = Vec::new();
+        let statement: Statement;
 
-                self.stream.consume();
-
-                loop {
-                    match self.stream.peek() {
-                        None => panic!("Expected statements or \"}}\"!"),
-                        Some(Token::RightCurlyBracket) => break,
-                        _ => statements.push(self.parse_statement()),
-                    }
-                }
-
-                match self.stream.consume() {
-                    Some(Token::RightCurlyBracket) => {},
-                    _ => panic!("Expected \"}}\"!"),
-                }
-
-                return Statement::Block {
-                    statements,
-                };
-            },
+        statement = match self.stream.peek() {
+            Some(Token::LeftCurlyBracket) =>
+                self.parse_block_statement(),
             Some(Token::Variable) =>
                 self.parse_variable_definition_statement(),
             _ => self.parse_expression_statement(),
+        };
+
+        statement
+    }
+
+    fn parse_block_statement(
+        &mut self
+    ) -> Statement {
+        let mut statements: Vec<Statement> = Vec::new();
+        let statement: Statement;
+
+        self.stream.consume();
+
+        loop {
+            match self.stream.peek() {
+                None => panic!("Expected statements or \"}}\"!"),
+                Some(Token::RightCurlyBracket) => break,
+                _ => statements.push(self.parse_statement()),
+            }
         }
+
+        match self.stream.consume() {
+            Some(Token::RightCurlyBracket) => {},
+            _ => panic!("Expected \"}}\"!"),
+        }
+
+        statement = Statement::Block {
+            statements,
+        };
+
+        statement
     }
 
     fn parse_variable_definition_statement(
