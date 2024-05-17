@@ -3,4 +3,9 @@ name = "fang-lang"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "yuan"
+path = "src/main.rs"
+
 [dependencies]
+clap = { version = "4.5.4", features = ["derive"] }

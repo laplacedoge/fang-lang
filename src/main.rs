@@ -1,31 +1,24 @@
 mod lexer;
 mod parser;
+mod frontend;
 
-use lexer::Tokenizer;
-use parser::Parser;
+use clap::Parser;
+use frontend::Frontend;
 
-const SAMPLE_FANG: &str = "
-/*
-func add_num(a: int, b: int) -> int {
-    return a + b;
+#[derive(Parser)]
+#[command(name = "yuan")]
+#[command(version = "1.0.0")]
+#[command(about = "The compiler for Fang programming language", long_about = None)]
+struct Cli {
+    file_path: String,
+
+    #[arg(short, long)]
+    output_path: Option<String>,
 }
 
-var var_3 = add_num(var_1, var_2);
-
-*/";
-
 fn main() {
-    let mut tokenizer = Tokenizer::new();
+    let cli = Cli::parse();
+    let frontend = Frontend::new();
 
-    tokenizer.scan(SAMPLE_FANG);
-
-    let stream = tokenizer.extract();
-
-    dbg!(&stream);
-
-    let mut parser = Parser::new(stream);
-
-    let program = parser.parse_program();
-
-    dbg!(&program);
+    frontend.process_file(&cli.file_path)
 }
