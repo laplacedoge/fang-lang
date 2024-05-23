@@ -5,8 +5,8 @@ use std::fmt::Debug;
 #[derive(Clone)]
 pub enum Token {
 
-    /// Keyword `var`.
-    Variable,
+    /// Keyword `let`.
+    Let,
 
     /// Keyword `func`.
     Function,
@@ -101,7 +101,7 @@ fn escape_string(str: &String) -> String {
 impl Debug for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Token::Variable => write!(f, "VARIABLE"),
+            Token::Let => write!(f, "LET"),
             Token::Function => write!(f, "FUNCTION"),
             Token::Return => write!(f, "RETURN"),
             Token::Identifier(text) => write!(f, "IDENTIFIER \"{}\"", text),
@@ -130,7 +130,7 @@ impl Debug for Token {
 impl PartialEq for Token {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Token::Variable, Token::Variable) |
+            (Token::Let, Token::Let) |
             (Token::Function, Token::Function) |
             (Token::Return, Token::Return) |
             (Token::Identifier(_), Token::Identifier(_)) |
@@ -438,8 +438,8 @@ fn fsm_proc(tokenizer: &mut Tokenizer, byte: Option<u8>) -> Result {
                 let text = identifier.as_str();
                 let token: Token;
 
-                if text == "var" {
-                    token = Token::Variable;
+                if text == "let" {
+                    token = Token::Let;
                 } else if text == "func" {
                     token = Token::Function;
                 } else if text == "return" {

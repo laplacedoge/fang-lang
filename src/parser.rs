@@ -62,10 +62,10 @@ enum Statement {
     /// 
     /// # Examples
     /// ```fang
-    /// var value;
-    /// var text = "Hello, world!";
-    /// var text: String;
-    /// var num: usize = 47;
+    /// let value;
+    /// let text = "Hello, world!";
+    /// let text: String;
+    /// let num: usize = 47;
     /// ```
     /// 
     /// # Fields
@@ -131,7 +131,7 @@ enum Statement {
     /// # Examples
     /// ```fang
     /// {
-    ///     var value = 33;
+    ///     let value = 33;
     /// }
     /// ```
     /// 
@@ -179,7 +179,7 @@ impl Parser {
         statement = match self.stream.peek() {
             Some(Token::LeftCurlyBracket) =>
                 self.parse_block_statement(),
-            Some(Token::Variable) =>
+            Some(Token::Let) =>
                 self.parse_variable_definition_statement(),
             Some(Token::Function) =>
                 self.parse_function_definition_statement(),
@@ -722,7 +722,7 @@ mod tests {
     fn variable_definition() {
         let mut program: Program;
 
-        program = scan_and_parse_program!("var var_1;");
+        program = scan_and_parse_program!("let var_1;");
         assert_eq!(program, Program {
             statements: vec![
                 Statement::VariableDefinition {
@@ -733,7 +733,7 @@ mod tests {
             ],
         });
 
-        program = scan_and_parse_program!("var var_2 = 47;");
+        program = scan_and_parse_program!("let var_2 = 47;");
         assert_eq!(program, Program {
             statements: vec![
                 Statement::VariableDefinition {
@@ -744,7 +744,7 @@ mod tests {
             ],
         });
 
-        program = scan_and_parse_program!("var str_1 = \"Hello, world!\\r\\n\";");
+        program = scan_and_parse_program!("let str_1 = \"Hello, world!\\r\\n\";");
         assert_eq!(program, Program {
             statements: vec![
                 Statement::VariableDefinition {
@@ -756,7 +756,7 @@ mod tests {
             ],
         });
 
-        program = scan_and_parse_program!("var var_3: int;");
+        program = scan_and_parse_program!("let var_3: int;");
         assert_eq!(program, Program {
             statements: vec![
                 Statement::VariableDefinition {
@@ -767,7 +767,7 @@ mod tests {
             ],
         });
 
-        program = scan_and_parse_program!("var var_4: int = 23;");
+        program = scan_and_parse_program!("let var_4: int = 23;");
         assert_eq!(program, Program {
             statements: vec![
                 Statement::VariableDefinition {
@@ -778,7 +778,7 @@ mod tests {
             ],
         });
 
-        program = scan_and_parse_program!("var var_5: int = var_1 + var_2;");
+        program = scan_and_parse_program!("let var_5: int = var_1 + var_2;");
         assert_eq!(program, Program {
             statements: vec![
                 Statement::VariableDefinition {
@@ -795,7 +795,7 @@ mod tests {
             ],
         });
 
-        program = scan_and_parse_program!("var var_6: int = var_3 * var_4 - var_5;");
+        program = scan_and_parse_program!("let var_6: int = var_3 * var_4 - var_5;");
         assert_eq!(program, Program {
             statements: vec![
                 Statement::VariableDefinition {
@@ -817,7 +817,7 @@ mod tests {
             ],
         });
 
-        program = scan_and_parse_program!("var var_7: int = var_3 * (var_4 - var_5);");
+        program = scan_and_parse_program!("let var_7: int = var_3 * (var_4 - var_5);");
         assert_eq!(program, Program {
             statements: vec![
                 Statement::VariableDefinition {
@@ -874,7 +874,7 @@ mod tests {
     fn block() {
         let program: Program;
 
-        program = scan_and_parse_program!("var value = 17; { value = 45; { value = 33; } {} }");
+        program = scan_and_parse_program!("let value = 17; { value = 45; { value = 33; } {} }");
         assert_eq!(program, Program {
             statements: vec![
                 Statement::VariableDefinition {
